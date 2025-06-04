@@ -1,7 +1,11 @@
 import os
+import sys
 import pytest
 from unittest.mock import MagicMock, call
-from LTX-Video.looped_generation import LoopedGeneration
+
+# Add the parent directory to sys.path to import looped_generation directly
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
+from looped_generation import LoopedGeneration
 
 @pytest.fixture
 def dummy_filesystem(tmp_path):
@@ -93,7 +97,7 @@ def test_feedback_loop_raises_if_no_mp4(monkeypatch, tmp_path):
         return os.listdir(path)
 
     looped = LoopedGeneration(
-        extract_last_frame_fn=MagicMock(),
+        extract_last_frame_fn=MagicMock(return_value="dummy_frame.png"),
         run_subprocess_fn=MagicMock(),
         sleep_fn=MagicMock(),
         listdir_fn=listdir_fn,
