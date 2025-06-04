@@ -17,8 +17,10 @@ def test_stitch_videos_creates_concat_file_and_calls_ffmpeg():
     
     with patch('subprocess.run') as mock_subprocess, \
          patch('builtins.open', mock_open()) as mock_file, \
+         patch('os.path.isfile', return_value=True), \
          patch('os.path.exists', return_value=True), \
-         patch('os.remove') as mock_remove:
+         patch('os.remove') as mock_remove, \
+         patch('looped_generation.logger'):
         
         result = stitch_videos(video_paths, output_dir, output_filename)
         
@@ -61,6 +63,55 @@ def test_stitch_videos_raises_error_on_empty_video_list():
         stitch_videos([], "/output/dir")
 
 
+def test_stitch_videos_validates_empty_output_dir():
+    """Test that stitch_videos raises ValueError when output dir is empty"""
+    video_paths = ["/path/to/video1.mp4"]
+    
+    with pytest.raises(ValueError, match="Output directory cannot be empty"):
+        stitch_videos(video_paths, "")
+    
+    with pytest.raises(ValueError, match="Output directory cannot be empty"):
+        stitch_videos(video_paths, "   ")
+
+
+def test_stitch_videos_validates_empty_output_filename():
+    """Test that stitch_videos raises ValueError when output filename is empty"""
+    video_paths = ["/path/to/video1.mp4"]
+    output_dir = "/output/dir"
+    
+    with pytest.raises(ValueError, match="Output filename cannot be empty"):
+        stitch_videos(video_paths, output_dir, "")
+    
+    with pytest.raises(ValueError, match="Output filename cannot be empty"):
+        stitch_videos(video_paths, output_dir, "   ")
+
+
+def test_stitch_videos_validates_video_files_exist():
+    """Test that stitch_videos raises FileNotFoundError when video files don't exist"""
+    video_paths = ["/nonexistent/video1.mp4", "/nonexistent/video2.mp4"]
+    output_dir = "/output/dir"
+    
+    with pytest.raises(FileNotFoundError, match="Video files not found"):
+        stitch_videos(video_paths, output_dir)
+
+
+def test_stitch_videos_handles_missing_ffmpeg():
+    """Test that stitch_videos handles missing FFmpeg gracefully"""
+    import subprocess
+    
+    video_paths = ["/path/to/video1.mp4"]
+    output_dir = "/output/dir"
+    
+    with patch('subprocess.run', side_effect=FileNotFoundError("ffmpeg not found")), \
+         patch('builtins.open', mock_open()), \
+         patch('os.path.isfile', return_value=True), \
+         patch('os.path.exists', return_value=True), \
+         patch('os.remove'):
+        
+        with pytest.raises(RuntimeError, match="FFmpeg not found"):
+            stitch_videos(video_paths, output_dir)
+
+
 def test_stitch_videos_handles_ffmpeg_error():
     """Test that stitch_videos handles FFmpeg subprocess errors correctly"""
     import subprocess
@@ -70,6 +121,7 @@ def test_stitch_videos_handles_ffmpeg_error():
     
     with patch('subprocess.run', side_effect=subprocess.CalledProcessError(1, 'ffmpeg')), \
          patch('builtins.open', mock_open()), \
+         patch('os.path.isfile', return_value=True), \
          patch('os.path.exists', return_value=True), \
          patch('os.remove') as mock_remove:
         
@@ -87,6 +139,7 @@ def test_stitch_videos_cleans_up_even_if_concat_file_missing():
     
     with patch('subprocess.run') as mock_subprocess, \
          patch('builtins.open', mock_open()), \
+         patch('os.path.isfile', return_value=True), \
          patch('os.path.exists', return_value=False), \
          patch('os.remove') as mock_remove:
         
@@ -96,6 +149,28 @@ def test_stitch_videos_cleans_up_even_if_concat_file_missing():
         mock_remove.assert_not_called()
 
 
+def test_stitch_videos_handles_cleanup_errors():
+    """Test that stitch_videos handles cleanup errors gracefully"""
+    video_paths = ["/path/to/video1.mp4"]
+    output_dir = "/output/dir"
+    
+    with patch('subprocess.run') as mock_subprocess, \
+         patch('builtins.open', mock_open()), \
+         patch('os.path.isfile', return_value=True), \
+         patch('os.path.exists', return_value=True), \
+         patch('os.remove', side_effect=OSError("Permission denied")), \
+         patch('looped_generation.logger') as mock_logger:
+        
+        # Should not raise exception even if cleanup fails
+        result = stitch_videos(video_paths, output_dir)
+        
+        # Should still return the output path
+        assert result == "/output/dir/final_stitched_video.mp4"
+        
+        # Should log the cleanup warning
+        mock_logger.warning.assert_called_once()
+
+
 def test_stitch_videos_uses_absolute_paths():
     """Test that stitch_videos converts paths to absolute paths in concat file"""
     video_paths = ["video1.mp4", "video2.mp4"]  # Relative paths
@@ -103,6 +178,7 @@ def test_stitch_videos_uses_absolute_paths():
     
     with patch('subprocess.run') as mock_subprocess, \
          patch('builtins.open', mock_open()) as mock_file, \
+         patch('os.path.isfile', return_value=True), \
          patch('os.path.exists', return_value=True), \
          patch('os.remove'), \
          patch('os.path.abspath', side_effect=lambda x: f"/absolute/{x}"):
@@ -126,6 +202,7 @@ def test_stitch_videos_default_filename():
     
     with patch('subprocess.run') as mock_subprocess, \
          patch('builtins.open', mock_open()), \
+         patch('os.path.isfile', return_value=True), \
          patch('os.path.exists', return_value=True), \
          patch('os.remove'):
         
@@ -145,6 +222,7 @@ def test_stitch_videos_single_video():
     
     with patch('subprocess.run') as mock_subprocess, \
          patch('builtins.open', mock_open()) as mock_file, \
+         patch('os.path.isfile', return_value=True), \
          patch('os.path.exists', return_value=True), \
          patch('os.remove'):
         
@@ -166,6 +244,7 @@ def test_stitch_videos_many_videos():
     
     with patch('subprocess.run') as mock_subprocess, \
          patch('builtins.open', mock_open()) as mock_file, \
+         patch('os.path.isfile', return_value=True), \
          patch('os.path.exists', return_value=True), \
          patch('os.remove'):
         
@@ -176,3 +255,25 @@ def test_stitch_videos_many_videos():
         expected_writes = [f"file '/path/to/video{i}.mp4'\n" for i in range(10)]
         actual_writes = [call.args[0] for call in handle.write.call_args_list]
         assert actual_writes == expected_writes
+
+
+def test_stitch_videos_sanitizes_paths():
+    """Test that stitch_videos properly sanitizes input paths"""
+    video_paths = ["  /path/to/video1.mp4  "]  # Path with whitespace
+    output_dir = "  /output/dir  "  # Dir with whitespace
+    output_filename = "  custom_output.mp4  "  # Filename with whitespace
+    
+    with patch('subprocess.run') as mock_subprocess, \
+         patch('builtins.open', mock_open()), \
+         patch('os.path.isfile', return_value=True), \
+         patch('os.path.exists', return_value=True), \
+         patch('os.remove'), \
+         patch('os.path.abspath', side_effect=lambda x: x.strip()):
+        
+        result = stitch_videos(video_paths, output_dir, output_filename)
+        
+        # Check that paths were sanitized
+        call_args = mock_subprocess.call_args[0][0]
+        output_path = call_args[-1]
+        assert output_path == "/output/dir/custom_output.mp4"  # Should be stripped
+        assert result == "/output/dir/custom_output.mp4"
