@@ -47,7 +47,6 @@ logger = logging.get_logger("LTX-Video")
 
 def get_total_gpu_memory():
     if torch.cuda.is_available():
-    if torch.cuda.is_available():
         total_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
         total_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
         return total_memory
@@ -55,15 +54,19 @@ def get_total_gpu_memory():
     elif torch.backends.mps.is_available():
         # MPS does not provide a direct way to get total memory, so we use system memory as a proxy
         import psutil
+
         total_memory = psutil.virtual_memory().total / (1024**3)
         return total_memory
     return 0
+
+
 def get_device():
     if torch.cuda.is_available():
         return "cuda"
     elif torch.backends.mps.is_available():
         return "mps"
     return "cpu"
+
 
 def load_image_to_tensor_with_resize_and_crop(
     image_input: Union[str, Image.Image],
