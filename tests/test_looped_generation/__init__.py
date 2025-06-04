@@ -1,0 +1,1 @@
+# This file allows pytest to discover tests in the test_looped_generation directory.
