@@ -46,6 +46,56 @@ def extract_last_frame(video_path: str) -> str:
     return str(png_path)
 
 
+def stitch_videos(video_paths: List[str], output_dir: str, output_filename: str = "final_stitched_video.mp4") -> str:
+    """
+    Stitches multiple MP4 videos together into one final output using FFmpeg.
+    
+    Args:
+        video_paths (List[str]): List of paths to MP4 files to stitch together
+        output_dir (str): Directory where the final output should be saved
+        output_filename (str): Name of the final output file
+        
+    Returns:
+        str: Path to the final stitched video file
+    """
+    if not video_paths:
+        raise ValueError("No video paths provided for stitching")
+    
+    output_path = os.path.join(output_dir, output_filename)
+    
+    # Create a temporary file list for FFmpeg concat
+    concat_file_path = os.path.join(output_dir, "concat_list.txt")
+    
+    try:
+        # Write the concat file with proper FFmpeg format
+        with open(concat_file_path, 'w') as f:
+            for video_path in video_paths:
+                # FFmpeg concat format: file 'path/to/video.mp4'
+                f.write(f"file '{os.path.abspath(video_path)}'\n")
+        
+        # FFmpeg command to concatenate videos
+        command = [
+            "ffmpeg",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", concat_file_path,
+            "-c", "copy",
+            "-y",  # Overwrite output file if it exists
+            output_path
+        ]
+        
+        subprocess.run(command, check=True)
+        
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"FFmpeg failed to stitch videos: {e}")
+    finally:
+        # Clean up the temporary concat file
+        if os.path.exists(concat_file_path):
+            os.remove(concat_file_path)
+    
+    return output_path
+
+
 class LoopedGeneration:
     def __init__(
         self,
@@ -54,12 +104,14 @@ class LoopedGeneration:
         sleep_fn: Callable[[float], None] = None,
         listdir_fn: Callable[[str], List[str]] = None,
         makedirs_fn: Callable[[str, bool], None] = None,
+        stitch_videos_fn: Callable[[List[str], str, str], str] = None,
     ):
         self.extract_last_frame_fn = extract_last_frame_fn
         self.run_subprocess_fn = run_subprocess_fn or self._default_run_subprocess
         self.sleep_fn = sleep_fn or time.sleep
         self.listdir_fn = listdir_fn or os.listdir
         self.makedirs_fn = makedirs_fn or os.makedirs
+        self.stitch_videos_fn = stitch_videos_fn or stitch_videos
 
     @staticmethod
     def _default_run_subprocess(cmd: List[str]):
@@ -77,6 +129,8 @@ class LoopedGeneration:
         number_of_frames: int = 60,
         inference_py: str = "inference.py",
         delay_between_iterations: float = 1.0,
+        stitch_videos: bool = False,
+        stitched_output_filename: str = "final_stitched_video.mp4",
     ):
         self.makedirs_fn(base_output_dir, exist_ok=True)
 
@@ -144,6 +198,22 @@ class LoopedGeneration:
 
             self.sleep_fn(delay_between_iterations)
 
+        # After all iterations, stitch videos if requested
+        if stitch_videos:
+            video_paths = []
+            for i in range(max_iterations):
+                frame_output = f"{base_output_dir}/frame_{str(i).zfill(3)}"
+                files = self.listdir_fn(frame_output)
+                mp4_files = [f for f in files if f.endswith(".mp4")]
+                if mp4_files:
+                    video_paths.append(os.path.join(frame_output, mp4_files[0]))
+            
+            if video_paths:
+                final_output = self.stitch_videos_fn(video_paths, base_output_dir, stitched_output_filename)
+                return final_output
+        
+        return None
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -177,16 +247,32 @@ def main():
         default=1337,
         help="Random seed for reproducibility (default: 1337)",
     )
+    parser.add_argument(
+        "--stitch-videos",
+        action="store_true",
+        help="Stitch all generated videos together into one final output",
+    )
+    parser.add_argument(
+        "--stitched-output-filename",
+        type=str,
+        default="final_stitched_video.mp4",
+        help="Filename for the final stitched video (default: final_stitched_video.mp4)",
+    )
 
     args = parser.parse_args()
 
     looped_gen = LoopedGeneration()
-    looped_gen.run_feedback_loop(
+    result = looped_gen.run_feedback_loop(
         initial_prompt=args.prompt,
         base_output_dir=args.output_dir,
         max_iterations=args.iterations,
         seed=args.seed,
+        stitch_videos=args.stitch_videos,
+        stitched_output_filename=args.stitched_output_filename,
     )
+    
+    if result:
+        print(f"Final stitched video saved to: {result}")
 
 
 if __name__ == "__main__":
