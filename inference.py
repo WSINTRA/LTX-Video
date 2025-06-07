@@ -269,7 +269,6 @@ def main():
     parser.add_argument(
         "--offload_to_cpu",
         action="store_true",
-        default=True,
         help="Offloading unnecessary computations to CPU.",
     )
 

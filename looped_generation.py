@@ -15,7 +15,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants
-DEFAULT_OUTPUT_DIR = "outputs/looped_video_005"
+DEFAULT_OUTPUT_DIR = "outputs/looped_video"
 DEFAULT_PIPELINE_CONFIG = "configs/ltxv-13b-0.9.7-distilled.yaml"
 DEFAULT_STITCHED_FILENAME = "final_stitched_video.mp4"
 CONCAT_TEMP_FILENAME = "concat_list.txt"
@@ -296,6 +296,7 @@ class LoopedGeneration:
         self,
         initial_prompt: str,
         seed: int,
+        input_image_path: Optional[str] = None,
         base_output_dir: str = DEFAULT_OUTPUT_DIR,
         max_iterations: int = 10,
         height: int = 512,
@@ -375,6 +376,15 @@ class LoopedGeneration:
             "--output_path",
             first_output,
         ]
+        if input_image_path:
+            first_cmd.extend(
+                [
+                    "--conditioning_media_paths",
+                    input_image_path,
+                    "--conditioning_start_frames",
+                    "0",
+                ]
+            )
 
         logger.info(f"Running first iteration: {' '.join(first_cmd)}")
         try:
@@ -433,6 +443,9 @@ class LoopedGeneration:
 
             self.sleep_fn(delay_between_iterations)
 
+        # After all iterations reset the current prompt and image
+        self.current_prompt = None
+        self.current_image = None
         # After all iterations, stitch videos if requested
         if stitch_videos:
             logger.info("Collecting videos for stitching")

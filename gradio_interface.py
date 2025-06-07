@@ -1,9 +1,10 @@
-import gradio as gr
-from looped_generation import LoopedGeneration
 import threading
 import queue
 import logging
 import os
+
+import gradio as gr
+from looped_generation import LoopedGeneration
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,7 +19,13 @@ class VideoGenerationInterface:
         self.pause_event = threading.Event()
 
     def start_generation(
-        self, prompt, input_image, num_iterations, output_dir, output_filename
+        self,
+        prompt,
+        input_image,
+        seed_input,
+        num_iterations,
+        output_dir,
+        output_filename,
     ):
         """Start the video generation process"""
         if self.is_generating:
@@ -32,7 +39,8 @@ class VideoGenerationInterface:
             try:
                 self.generator.run_feedback_loop(
                     initial_prompt=prompt,
-                    seed=42,
+                    seed=seed_input,
+                    input_image_path=input_image,
                     base_output_dir=output_dir,
                     max_iterations=int(num_iterations),
                     stitch_videos=True,
@@ -69,7 +77,7 @@ class VideoGenerationInterface:
 def create_interface():
     interface = VideoGenerationInterface()
 
-    with gr.Blocks() as demo:
+    with gr.Blocks() as looper_interface:
         gr.Markdown("# Video Generation Interface")
 
         with gr.Row():
@@ -84,6 +92,9 @@ def create_interface():
                     value=10,
                     step=1,
                     label="Number of Iterations",
+                )
+                seed_input = gr.Number(
+                    label="Random Seed (optional)", value=42, precision=0
                 )
                 output_dir = gr.Textbox(
                     label="Output Directory", value="outputs/gradio_output"
@@ -121,12 +132,13 @@ def create_interface():
             inputs=[
                 prompt_input,
                 image_input,
+                seed_input,
                 num_iterations,
                 output_dir,
                 output_filename,
             ],
             outputs=status_output,
-        )
+        ).success(fn=update_video_output, inputs=[], outputs=[video_output])
 
         pause_btn.click(fn=interface.pause_generation, inputs=[], outputs=status_output)
 
@@ -136,9 +148,9 @@ def create_interface():
             outputs=status_output,
         ).then(fn=update_video_output, inputs=[], outputs=[video_output])
 
-    return demo
+    return looper_interface
 
 
 if __name__ == "__main__":
     demo = create_interface()
-    demo.launch(share=True)
+    demo.launch(share=False)
