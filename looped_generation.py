@@ -404,20 +404,20 @@ class LoopedGeneration:
                 raise FileNotFoundError(f"No .mp4 file found in {prev_output}")
 
             input_mp4 = os.path.join(prev_output, mp4_files[0])
-            #last_frame_png = self.extract_last_frame_fn(input_mp4)
+            last_frame_png = self.extract_last_frame_fn(input_mp4)
 
-            #conditioning_paths = []
-            #if self.current_image:  # If user provided a new image during pause
-            #    conditioning_paths.append(self.current_image)
-            #else:
-            #    conditioning_paths.append(last_frame_png)
+            conditioning_paths = []
+            if self.current_image:  # If user provided a new image during pause
+                conditioning_paths.append(self.current_image)
+            else:
+                conditioning_paths.append(last_frame_png)
             cmd = [
                 "python",
                 inference_py,
                 "--prompt",
                 self.current_prompt,
                 "--conditioning_media_paths",
-                input_mp4,  # Use the last video as conditioning input
+                ','.join(conditioning_paths),  
                 "--conditioning_start_frames",
                 "0",
                 "--height",
