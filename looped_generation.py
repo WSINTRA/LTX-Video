@@ -302,7 +302,7 @@ class LoopedGeneration:
         height: int = 512,
         width: int = 768,
         pipeline_config: str = DEFAULT_PIPELINE_CONFIG,
-        number_of_frames: int = 60,
+        number_of_frames: int = 96,
         inference_py: str = "inference.py",
         delay_between_iterations: float = 1.0,
         stitch_videos: bool = False,
