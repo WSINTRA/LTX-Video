@@ -1,3 +1,5 @@
+# gradio_interface.py
+"""Gradio interface for video generation using the LoopedGeneration class."""
 import threading
 import queue
 import logging
@@ -11,6 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 class VideoGenerationInterface:
+    """Gradio interface for video generation using LoopedGeneration class."""
+
     def __init__(self):
         self.generator = LoopedGeneration()
         self.generation_thread = None
@@ -75,6 +79,7 @@ class VideoGenerationInterface:
 
 
 def create_interface():
+    """Create the Gradio interface for video generation."""
     interface = VideoGenerationInterface()
 
     with gr.Blocks() as looper_interface:
@@ -88,8 +93,8 @@ def create_interface():
                 image_input = gr.Image(label="Input Image (optional)", type="filepath")
                 num_iterations = gr.Slider(
                     minimum=1,
-                    maximum=20,
-                    value=10,
+                    maximum=200,
+                    value=20,
                     step=1,
                     label="Number of Iterations",
                 )
@@ -119,7 +124,8 @@ def create_interface():
                 resume_btn = gr.Button("Resume with New Inputs")
 
         # Display area for the generated video
-        video_output = gr.Video(label="Generated Video")
+        video_path = os.path.join(output_dir.value, output_filename.value)
+        video_output = gr.Video(video_path, label="Generated Video")
 
         def update_video_output():
             # Function to update the video output display
@@ -138,7 +144,7 @@ def create_interface():
                 output_filename,
             ],
             outputs=status_output,
-        ).success(fn=update_video_output, inputs=[], outputs=[video_output])
+        ).then(update_video_output, inputs=[], outputs=[video_output])
 
         pause_btn.click(fn=interface.pause_generation, inputs=[], outputs=status_output)
 
@@ -152,5 +158,5 @@ def create_interface():
 
 
 if __name__ == "__main__":
-    demo = create_interface()
-    demo.launch(share=False)
+    looper = create_interface()
+    looper.launch(share=False)
