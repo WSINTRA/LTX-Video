@@ -50,7 +50,7 @@ def extract_last_frame(video_path: str) -> str:
     command = [
         "ffmpeg",
         "-sseof",
-        "-1",
+        "-0.1",
         "-i",
         str(video_path),
         "-frames:v",
