@@ -19,7 +19,7 @@ first_pass:
   rescaling_scale: [1, 1, 0.5, 0.5, 1, 1, 1]
   guidance_timesteps: [1.0, 0.996,  0.9933, 0.9850, 0.9767, 0.9008, 0.6180]
   skip_block_list: [[], [11, 25, 35, 39], [22, 35, 39], [28], [28], [28], [28]]
-  num_inference_steps: 30
+  num_inference_steps: 50
   skip_final_inference_steps: 3
   cfg_star_rescale: true
 
@@ -29,6 +29,6 @@ second_pass:
   rescaling_scale: [1]
   guidance_timesteps: [1.0]
   skip_block_list: [27]
-  num_inference_steps: 30
+  num_inference_steps: 50
   skip_initial_inference_steps: 17
   cfg_star_rescale: true

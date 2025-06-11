@@ -124,12 +124,12 @@ def create_interface():
                 resume_btn = gr.Button("Resume with New Inputs")
 
         # Display area for the generated video
-        video_path = os.path.join(output_dir.value, output_filename.value)
+        video_path = f"{output_dir}"
         video_output = gr.Video(video_path, label="Generated Video")
 
         def update_video_output():
             # Function to update the video output display
-            video_path = os.path.join(output_dir.value, output_filename.value)
+            video_path = f"{output_dir}/{output_filename}"
             return video_path if os.path.exists(video_path) else None
 
         # Event handlers

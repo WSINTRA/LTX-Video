@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 DEFAULT_OUTPUT_DIR = "outputs/looped_video"
-DEFAULT_PIPELINE_CONFIG = "configs/ltxv-13b-0.9.7-distilled.yaml"
+DEFAULT_PIPELINE_CONFIG = "configs/ltxv-13b-0.9.7-dev.yaml"
 DEFAULT_STITCHED_FILENAME = "final_stitched_video.mp4"
 CONCAT_TEMP_FILENAME = "concat_list.txt"
 
@@ -417,7 +417,7 @@ class LoopedGeneration:
                 "--prompt",
                 self.current_prompt,
                 "--conditioning_media_paths",
-                ','.join(conditioning_paths),  
+                ",".join(conditioning_paths),
                 "--conditioning_start_frames",
                 "0",
                 "--height",

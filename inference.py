@@ -239,7 +239,7 @@ def main():
         help="Number of frames to generate in the output video",
     )
     parser.add_argument(
-        "--frame_rate", type=int, default=30, help="Frame rate for the output video"
+        "--frame_rate", type=int, default=23, help="Frame rate for the output video"
     )
     parser.add_argument(
         "--device",
